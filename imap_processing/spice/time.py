@@ -52,7 +52,7 @@ def _vectorize(pyfunc: typing.Callable, **vectorize_kwargs) -> typing.Callable:
     return wrapper
 
 
-def met_to_sclkticks(met: npt.ArrayLike) -> npt.NDArray[float]:
+def met_to_sclkticks(met: npt.ArrayLike) -> npt.NDArray[np.float64]:
     """
     Convert Mission Elapsed Time (MET) to floating point spacecraft clock ticks.
 
@@ -243,7 +243,7 @@ def et_to_met(
 
 def ttj2000ns_to_met(
     tt_ns: npt.ArrayLike,
-) -> npt.NDArray[float]:
+) -> npt.NDArray[np.float64]:
     """
     Convert terrestrial time nanoseconds since J2000 to mission elapsed time (MET).
 
