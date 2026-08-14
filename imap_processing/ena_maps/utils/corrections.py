@@ -16,6 +16,7 @@ from imap_processing.ena_maps.ena_maps import (
 from imap_processing.ena_maps.utils.coordinates import CoordNames
 from imap_processing.spice import geometry
 from imap_processing.spice.time import ttj2000ns_to_et
+from imap_processing.utils import validate_str
 
 logger = logging.getLogger(__name__)
 
@@ -387,7 +388,7 @@ class PowerLawFluxCorrector:
         """
         # Stack all non-energy dimensions into a single "pixel" dimension
         # This converts to shape (energy, pixel) for processing
-        spatial_dims = [d for d in flux.dims if "energy" not in d]
+        spatial_dims = [d for d in flux.dims if "energy" not in validate_str(d)]
 
         if spatial_dims:
             flux_stacked = flux.stack(flux_pixel=spatial_dims)
@@ -478,6 +479,8 @@ def add_spacecraft_position_and_velocity_to_pset(
             f"Logical_source: {pset.attrs['Logical_source']}"
         )
 
+    sc_position_vector: np.ndarray
+    sc_velocity_vector: np.ndarray
     # Handle case where pointing duration is zero or negative to avoid invalid
     # ephemeris time (this is used, for example, for empty psets due to
     # goodtimes filtering)

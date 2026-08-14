@@ -23,6 +23,7 @@ from imap_processing.ena_maps.utils import map_utils, naming, spatial_utils
 from imap_processing.ena_maps.utils.coordinates import CoordNames
 from imap_processing.spice import geometry
 from imap_processing.spice.time import met_to_ttj2000ns, ttj2000ns_to_et
+from imap_processing.utils import validate_str
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ def match_coords_to_indices(
     # Transform the input pixel centers to the output frame
     input_obj_az_el_output_frame = geometry.frame_transform_az_el(
         et=event_et,
-        az_el=input_obj_az_el_input_frame,
+        az_el=input_obj_az_el_input_frame.to_numpy(),
         from_frame=input_object.spice_reference_frame,
         to_frame=output_object.spice_reference_frame,
         degrees=True,
@@ -181,8 +182,9 @@ def match_coords_to_indices(
             )
             - 1
         )
+        # Mypy is unable to determine the correct overload for this numpy function
         flat_indices_input_grid_output_frame = np.ravel_multi_index(
-            multi_index=(az_indices, el_indices),
+            multi_index=(az_indices, el_indices),  # type: ignore[arg-type]
             dims=(
                 len(output_object.sky_grid.az_bin_midpoints),
                 len(output_object.sky_grid.el_bin_midpoints),
@@ -208,12 +210,12 @@ def match_coords_to_indices(
     # Wrap the output indices in a DataArray with the same leading dimensions as
     # the input object az_el_points to preserve broadcasting information
     input_dims = input_obj_az_el_input_frame.dims[:-1]
-    flat_indices_input_grid_output_frame = xr.DataArray(
+    flat_indices_input_grid_output_frame_da = xr.DataArray(
         flat_indices_input_grid_output_frame,
         dims=input_dims,
     )
 
-    return flat_indices_input_grid_output_frame
+    return flat_indices_input_grid_output_frame_da
 
 
 # Define a TypeVar type to dynamically hint the return type of the base PointingSet
@@ -328,10 +330,11 @@ class PointingSet(ABC):
             E.g.: {"counts": ("epoch", "energy", "pixel")} .
         """
         variable_dims = {}
-        for var_name in self.data.data_vars:
+        for _var_name in self.data.data_vars:
+            var_name = validate_str(_var_name)
             pset_dims = self.data[var_name].dims
             non_spatial_dims = tuple(
-                dim for dim in pset_dims if dim not in self.spatial_coords
+                validate_str(dim) for dim in pset_dims if dim not in self.spatial_coords
             )
 
             variable_dims[var_name] = (
@@ -352,7 +355,8 @@ class PointingSet(ABC):
             E.g.: {"epoch": [12345,], "energy": [100, 200, 300]} .
         """
         non_spatial_coords = {}
-        for coord_name in self.data.coords:
+        for _coord_name in self.data.coords:
+            coord_name = validate_str(_coord_name)
             if coord_name not in self.spatial_coords:
                 non_spatial_coords[coord_name] = self.data[coord_name]
         return non_spatial_coords
@@ -887,13 +891,13 @@ class AbstractSkyMap(ABC):
 
     @property
     @abstractmethod
-    def binning_grid_shape(self) -> tuple[int]:
+    def binning_grid_shape(self) -> tuple[int, ...]:
         """
         Shape of the binning grid.
 
         Returns
         -------
-        binning_grid_shape : tuple[int]
+        binning_grid_shape : tuple[int, ...]
             Shape of the binning grid.
         """
         raise NotImplementedError("binning_grid_shape property method not implemented.")
@@ -1305,13 +1309,13 @@ class RectangularSkyMap(AbstractSkyMap):
         return self.sky_grid.spacing_deg
 
     @property
-    def binning_grid_shape(self) -> tuple[int]:
+    def binning_grid_shape(self) -> tuple[int, ...]:
         """
         Shape of the AzElSkyGrid.
 
         Returns
         -------
-        binning_grid_shape : tuple[int]
+        binning_grid_shape : tuple[int, int]
             Shape of the AzElSkyGrid (num_az_bins, num_el_bins).
         """
         return self.sky_grid.grid_shape
@@ -1365,7 +1369,7 @@ class RectangularSkyMap(AbstractSkyMap):
             # Add the output coordinates to the rewrapped data, excluding the pixel
             self.non_spatial_coords.update(
                 {
-                    coord: self.data_1d[key].coords[coord]
+                    validate_str(coord): self.data_1d[key].coords[coord]
                     for coord in self.data_1d[key].coords
                     if coord != CoordNames.GENERIC_PIXEL.value
                 }
@@ -1430,7 +1434,7 @@ class RectangularSkyMap(AbstractSkyMap):
             cdf_ds = self.to_dataset()
 
         # Set the value of the epoch coord
-        cdf_ds = cdf_ds.assign_coords(**{CoordNames.TIME.value: [self.min_epoch]})
+        cdf_ds = cdf_ds.assign_coords({CoordNames.TIME.value: [self.min_epoch]})
 
         # Drop variables dependent on dimensions not in L2 output
         # Need to iterate over CoordNames.__members__ because for an Enum, labels
@@ -1441,7 +1445,8 @@ class RectangularSkyMap(AbstractSkyMap):
             if ("L2" in name)
         ]
         l2_coords.append(CoordNames.TIME.value)
-        for map_coord in cdf_ds.dims:
+        for _map_coord in cdf_ds.dims:
+            map_coord = validate_str(_map_coord)
             if map_coord not in l2_coords:
                 cdf_ds = cdf_ds.drop_dims(map_coord)
 
