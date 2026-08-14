@@ -754,7 +754,9 @@ def process_swapi_science(
     return dataset
 
 
-def swapi_l1(dependencies: ProcessingInputCollection, descriptor: str) -> xr.Dataset:
+def swapi_l1(
+    dependencies: ProcessingInputCollection, descriptor: str
+) -> list[xr.Dataset]:
     """
     Will process SWAPI level 0 data to level 1.
 
@@ -768,7 +770,7 @@ def swapi_l1(dependencies: ProcessingInputCollection, descriptor: str) -> xr.Dat
 
     Returns
     -------
-    processed_data : xarray.Dataset
+    processed_data : list[xarray.Dataset]
         Set of processed data.
     """
     xtce_definition = (
