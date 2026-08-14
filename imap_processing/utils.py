@@ -5,6 +5,7 @@ import logging
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -27,11 +28,29 @@ logger = logging.getLogger(__name__)
 TIME_KEY_INDEX = 7
 
 
+def validate_str(x: Any) -> str:
+    """Ensure the argument is a string; otherwise raise a TypeError.
+
+    Parameters
+    ----------
+    x : Any
+        The value to ensure is a str.
+
+    Returns
+    -------
+    s: str
+        The validated str.
+    """
+    if not isinstance(x, str):
+        raise TypeError(f"Expected str, not {type(x).__name__}")
+    return x
+
+
 def convert_raw_to_eu(
     dataset: xr.Dataset,
     conversion_table_path: str,
     packet_name: str,
-    **read_csv_kwargs: dict,
+    **read_csv_kwargs: Any,
 ) -> xr.Dataset:  # numpydoc ignore=PR01,PR09
     """
     Convert raw data to engineering unit.
@@ -66,7 +85,7 @@ def convert_raw_to_eu(
         the '#' character.
     packet_name : str
         Packet name.
-    **read_csv_kwargs : dict
+    **read_csv_kwargs : Any
         In order to allow for some flexibility in the format of the csv
         conversion table, any additional keywords passed to this function are
         passed in the call to `pandas.read_csv()`.
@@ -86,7 +105,8 @@ def convert_raw_to_eu(
 
     # Iterate through every variable in the dataset and check if there is an entry for
     # That variable in the conversion table.
-    for var in dataset.variables:
+    for _var in dataset.variables:
+        var = validate_str(_var)
         packet_df = eu_conversion_df.loc[
             (eu_conversion_df["packetName"] == packet_name)
             &
@@ -348,7 +368,7 @@ def packet_file_to_datasets(
                 # partition splits the string into 3 parts: before ".", after "."
                 # if there was no ".", the second part is an empty string, so we use
                 # the original key in that case
-                key: key.partition(".")[2] or key
+                key: validate_str(key).partition(".")[2] or key
                 for key in ds.variables
             }
         )
