@@ -390,7 +390,7 @@ def get_h_species(de: xr.Dataset) -> xr.Dataset:
     golden_triple_mask = _get_golden_triple_mask(de)
     h_peak_mask = _get_peak_mask(de, h_peak_low, h_peak_high)
 
-    h_idx = np.nonzero((golden_triple_mask & h_peak_mask).values)[0]
+    h_idx = np.nonzero(golden_triple_mask & h_peak_mask)[0]
 
     de_h = de.isel(epoch=h_idx)
     return de_h
@@ -415,7 +415,7 @@ def get_o_species(de: xr.Dataset) -> xr.Dataset:
 
     golden_triple_mask = _get_golden_triple_mask(de)
     o_peak_mask = _get_peak_mask(de, co_peak_low, co_peak_high)
-    o_idx = np.nonzero((golden_triple_mask & o_peak_mask).values)[0]
+    o_idx = np.nonzero(golden_triple_mask & o_peak_mask)[0]
 
     de_o = de.isel(epoch=o_idx)
     return de_o
