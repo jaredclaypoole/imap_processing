@@ -37,6 +37,7 @@ from imap_processing.codice.constants import (
     SSD_ID_TO_SPIN_ANGLE,
 )
 from imap_processing.codice.utils import apply_replacements_to_attrs
+from imap_processing.utils import validate_strs
 
 logger = logging.getLogger(__name__)
 
@@ -1119,7 +1120,7 @@ def process_hi_sectored(dependencies: ProcessingInputCollection) -> xr.Dataset:
     )
 
     # Now carry over other variables from L1B to L2 dataset
-    for variable in l1b_dataset.data_vars:
+    for variable in validate_strs(l1b_dataset.data_vars):
         if variable.startswith("epoch_") and variable != "epoch":
             # get attrs with just that name
             l2_dataset[variable] = xr.DataArray(
@@ -1272,7 +1273,7 @@ def process_lo_direct_events(dependencies: ProcessingInputCollection) -> xr.Data
     l2_dataset.attrs.update(
         cdf_attrs.get_global_attributes("imap_codice_l2_lo-direct-events")
     )
-    for var in l2_dataset.data_vars:
+    for var in validate_strs(l2_dataset.data_vars):
         if "nso" in var or "rgfo" in var:
             # skip adding attributes for these variables. They should already
             # have attrs carried over from l1a.

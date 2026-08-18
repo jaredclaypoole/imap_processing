@@ -100,7 +100,7 @@ def _apply_lzma_lossless(compressed_bytes: bytes) -> bytes:
     return lzma_decompressed_values
 
 
-def _apply_pack_24_bit(compressed_bytes: bytes) -> NDArray[int]:
+def _apply_pack_24_bit(compressed_bytes: bytes) -> NDArray[np.uint32]:
     """
     Apply the pack 24 bit decompression algorithm.
 
@@ -114,9 +114,11 @@ def _apply_pack_24_bit(compressed_bytes: bytes) -> NDArray[int]:
     decompressed_values : NDArray[int]
         The 24-bit decompressed values.
     """
-    decompressed_values = np.frombuffer(compressed_bytes, dtype=np.uint8).reshape(-1, 3)
+    decompressed_values_bytes = np.frombuffer(compressed_bytes, dtype=np.uint8).reshape(
+        -1, 3
+    )
     decompressed_values = np.array(
-        [int.from_bytes(value, byteorder="big") for value in decompressed_values],
+        [int.from_bytes(value, byteorder="big") for value in decompressed_values_bytes],
         dtype=np.uint32,
     )
 
