@@ -2,7 +2,7 @@
 
 import collections
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -44,6 +44,25 @@ def validate_str(x: Any) -> str:
     if not isinstance(x, str):
         raise TypeError(f"Expected str, not {type(x).__name__}")
     return x
+
+
+def validate_strs(x: Iterable[Any]) -> Iterable[str]:
+    """Lazily ensure each element of the iterable argument is a string.
+
+    If any element is not a string, raise a TypeError.
+
+    Parameters
+    ----------
+    x : Iterable[Any]
+        The iterable of value to ensure are strings.
+
+    Yields
+    ------
+    str
+        The validated strings.
+    """
+    for elem in x:
+        yield validate_str(elem)
 
 
 def convert_raw_to_eu(
