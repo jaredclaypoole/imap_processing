@@ -5,7 +5,7 @@ import logging
 from collections.abc import Generator, Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -63,6 +63,27 @@ def validate_strs(x: Iterable[Any]) -> Iterable[str]:
     """
     for elem in x:
         yield validate_str(elem)
+
+
+T = TypeVar("T")
+
+
+def validate_not_none(x: T | None) -> T:
+    """Ensure the argument is not None; otherwise raise a TypeError.
+
+    Parameters
+    ----------
+    x : T | None
+        The value to ensure is not None.
+
+    Returns
+    -------
+    x: T
+        The validated value.
+    """
+    if x is None:
+        raise TypeError("Expected non-None value")
+    return x
 
 
 def convert_raw_to_eu(
