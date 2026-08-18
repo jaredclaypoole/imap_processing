@@ -200,7 +200,7 @@ def generate_de_dataset(
 
     for index, de in enumerate(de_l1a_list):
         # Set the timestamp to the first timestamp of the direct event list
-        epoch_time = met_to_ttj2000ns(de.l0.MET)
+        epoch_time_np = met_to_ttj2000ns(de.l0.MET)
 
         # determine if the length of the direct_events numpy array is long enough,
         # and extend the direct_events length dimension if necessary.
@@ -225,7 +225,7 @@ def generate_de_dataset(
         new_de = np.array([event.to_list() for event in de.direct_events])
 
         direct_events[index, : len(de.direct_events), :] = new_de
-        time_data[index] = epoch_time
+        time_data[index] = epoch_time_np
 
         # Adding data that will go into CDF file
         support_data["seq_count_in_pkts_file"][1].append(
@@ -264,7 +264,7 @@ def generate_de_dataset(
         ),
     )
 
-    de = xr.DataArray(
+    de_da = xr.DataArray(
         direct_events,
         name="direct_events",
         dims=["epoch", "within_the_second", "direct_event_components"],
@@ -282,7 +282,7 @@ def generate_de_dataset(
         attrs=glows_cdf_attributes.get_global_attributes("imap_glows_l1a_de"),
     )
 
-    output["direct_events"] = de
+    output["direct_events"] = de_da
 
     for key, value in support_data.items():
         output[key] = xr.DataArray(
@@ -368,33 +368,33 @@ def generate_histogram_dataset(
     )
 
     # First variable is the output data type, second is the list of values
-    support_data: dict = {
-        "seq_count_in_pkts_file": [np.uint16, []],
-        "first_spin_id": [np.uint32, []],
-        "last_spin_id": [np.uint32, []],
-        "flags_set_onboard": [np.uint16, []],
-        "is_generated_on_ground": [np.uint8, []],
-        "number_of_spins_per_block": [np.uint8, []],
-        "number_of_bins_per_histogram": [np.uint16, []],
-        "number_of_events": [np.uint32, []],
-        "filter_temperature_average": [np.uint32, []],
-        "filter_temperature_variance": [np.uint32, []],
-        "hv_voltage_average": [np.uint32, []],
-        "hv_voltage_variance": [np.uint32, []],
-        "spin_period_average": [np.uint32, []],
-        "spin_period_variance": [np.uint32, []],
-        "pulse_length_average": [np.uint32, []],
-        "pulse_length_variance": [np.uint32, []],
+    support_data: dict[str, tuple[type, list]] = {
+        "seq_count_in_pkts_file": (np.uint16, []),
+        "first_spin_id": (np.uint32, []),
+        "last_spin_id": (np.uint32, []),
+        "flags_set_onboard": (np.uint16, []),
+        "is_generated_on_ground": (np.uint8, []),
+        "number_of_spins_per_block": (np.uint8, []),
+        "number_of_bins_per_histogram": (np.uint16, []),
+        "number_of_events": (np.uint32, []),
+        "filter_temperature_average": (np.uint32, []),
+        "filter_temperature_variance": (np.uint32, []),
+        "hv_voltage_average": (np.uint32, []),
+        "hv_voltage_variance": (np.uint32, []),
+        "spin_period_average": (np.uint32, []),
+        "spin_period_variance": (np.uint32, []),
+        "pulse_length_average": (np.uint32, []),
+        "pulse_length_variance": (np.uint32, []),
     }
-    time_metadata: dict = {
-        "imap_start_time": [np.float64, []],
-        "imap_time_offset": [np.float64, []],
-        "glows_start_time": [np.float64, []],
-        "glows_time_offset": [np.float64, []],
+    time_metadata: dict[str, tuple[type, list]] = {
+        "imap_start_time": (np.float64, []),
+        "imap_time_offset": (np.float64, []),
+        "glows_start_time": (np.float64, []),
+        "glows_time_offset": (np.float64, []),
     }
 
     for index, hist in enumerate(hist_l1a_list):
-        epoch_time = met_to_ttj2000ns(
+        epoch_time_np = met_to_ttj2000ns(
             hist.imap_start_time.to_seconds() + hist.imap_time_offset.to_seconds() / 2
         )
         # Assign histogram data, padding with zeros if shorter than max_bins
@@ -407,13 +407,13 @@ def generate_histogram_dataset(
         )
 
         # Add support_data keys to the support_data dictionary
-        for key, support_val in support_data.items():
-            if key not in ["flags_set_onboard", "is_generated_on_ground"]:
-                support_val[1].append(hist.__getattribute__(key))
+        for _key, support_val in support_data.items():
+            if _key not in ["flags_set_onboard", "is_generated_on_ground"]:
+                support_val[1].append(hist.__getattribute__(_key))
         # For the time varying data, convert to seconds and then append
-        for key, time_metadata_val in time_metadata.items():
-            time_metadata_val[1].append(hist.__getattribute__(key).to_seconds())
-        time_data[index] = epoch_time
+        for _key, time_metadata_val in time_metadata.items():
+            time_metadata_val[1].append(hist.__getattribute__(_key).to_seconds())
+        time_data[index] = epoch_time_np
 
     epoch_time = xr.DataArray(
         time_data,
@@ -442,7 +442,7 @@ def generate_histogram_dataset(
         ),
     )
 
-    hist = xr.DataArray(
+    hist_da = xr.DataArray(
         hist_data,
         name="histogram",
         dims=["epoch", "bins"],
@@ -459,28 +459,28 @@ def generate_histogram_dataset(
         attrs=attrs,
     )
 
-    output["histogram"] = hist
+    output["histogram"] = hist_da
 
     # These attributes are the same for each record, so we don't
     # need to store them per epoch like most of the other fields
     # Instead, we store them as global attributes
     output.attrs["flight_software_version"] = hist_l1a_list[0].flight_software_version
 
-    for key, value in support_data.items():
-        output[key] = xr.DataArray(
+    for _key, value in support_data.items():
+        output[_key] = xr.DataArray(
             np.array(value[1], dtype=value[0]),
-            name=key,
+            name=_key,
             dims=["epoch"],
             coords={"epoch": epoch_time},
-            attrs=glows_cdf_attributes.get_variable_attributes(key),
+            attrs=glows_cdf_attributes.get_variable_attributes(_key),
         )
-    for key, value in time_metadata.items():
-        output[key] = xr.DataArray(
+    for _key, value in time_metadata.items():
+        output[_key] = xr.DataArray(
             np.array(value[1], dtype=value[0]),
-            name=key,
+            name=_key,
             dims=["epoch"],
             coords={"epoch": epoch_time},
-            attrs=glows_cdf_attributes.get_variable_attributes(key),
+            attrs=glows_cdf_attributes.get_variable_attributes(_key),
         )
 
     return output

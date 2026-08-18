@@ -2,9 +2,11 @@
 
 import dataclasses
 from dataclasses import InitVar, dataclass, field
+from typing import cast
 
 import numpy as np
 import xarray as xr
+from numpy.typing import NDArray
 from scipy.stats import circmean, circstd
 
 from imap_processing.glows import BAD_TIME_FLAG_NAMES, FLAG_LENGTH
@@ -24,6 +26,7 @@ from imap_processing.spice.spin import (
     get_spin_data,
 )
 from imap_processing.spice.time import met_to_datetime64, met_to_sclkticks, sct_to_et
+from imap_processing.utils import validate_not_none, validate_strs
 
 
 @dataclass
@@ -163,7 +166,7 @@ class PipelineSettings:  # numpydoc ignore=PR02
 
         # Extract processing thresholds (collect all threshold-related variables)
         self.processing_thresholds = {}
-        for var_name in pipeline_dataset.data_vars:
+        for var_name in validate_strs(pipeline_dataset.data_vars):
             if "threshold" in var_name.lower() or "limit" in var_name.lower():
                 self.processing_thresholds[var_name] = pipeline_dataset[var_name].item()
 
@@ -836,6 +839,7 @@ class HistogramL1B:
         """
         # self.histogram_flag_array = np.zeros((2,))
         day = met_to_datetime64(self.imap_start_time)
+        day = cast(np.datetime64, day)
 
         # Add SPICE related variables
         self.update_spice_parameters(pipeline_settings.spin_offset_correction)
@@ -878,6 +882,7 @@ class HistogramL1B:
 
         # Generate ISO datetime string using SPICE functions
         datetime64_time = met_to_datetime64(self.imap_start_time)
+        datetime64_time = cast(np.datetime64, datetime64_time)
         self.unique_block_identifier = np.datetime_as_string(datetime64_time, "s")
         # Initialize histogram flag array: [is_close_to_uv_source,
         # is_inside_excluded_region, is_excluded_by_instr_team,
@@ -921,7 +926,7 @@ class HistogramL1B:
         # --------------------------------
         angle_offset = 360 - get_spin_angle(
             get_instrument_spin_phase(
-                self.imap_start_time, instrument=geometry.SpiceFrame.IMAP_GLOWS
+                float(self.imap_start_time), instrument=geometry.SpiceFrame.IMAP_GLOWS
             ),
             degrees=True,
         )
@@ -983,7 +988,7 @@ class HistogramL1B:
         return tuple(getattr(self, out.name) for out in dataclasses.fields(self))
 
     @staticmethod
-    def deserialize_flags(raw: int) -> np.ndarray[int]:
+    def deserialize_flags(raw: int) -> NDArray[np.bool]:
         """
         Deserialize the flags into a list.
 
@@ -999,7 +1004,7 @@ class HistogramL1B:
         """
         # there are only 10 flags in the on-board flag array, additional flags are added
         # later.
-        flags: np.ndarray[bool] = np.array(
+        flags: NDArray[np.bool] = np.array(
             [bool((raw >> i) & 1) for i in range(10)], dtype=bool
         )
 
@@ -1038,12 +1043,18 @@ class HistogramL1B:
 
         # Section 12.3.2 of the Algorithm Document: ground processing flags: flag 3-7.
         # (1=good, 0=bad).
-        temp_threshold = pipeline_settings.get_threshold(
-            "std_dev_threshold__celsius_deg"
+        temp_threshold = validate_not_none(
+            pipeline_settings.get_threshold("std_dev_threshold__celsius_deg"),
         )
-        hv_threshold = pipeline_settings.get_threshold("std_dev_threshold__volt")
-        spin_std_threshold = pipeline_settings.get_threshold("std_dev_threshold__sec")
-        pulse_threshold = pipeline_settings.get_threshold("std_dev_threshold__usec")
+        hv_threshold = validate_not_none(
+            pipeline_settings.get_threshold("std_dev_threshold__volt"),
+        )
+        spin_std_threshold = validate_not_none(
+            pipeline_settings.get_threshold("std_dev_threshold__sec"),
+        )
+        pulse_threshold = validate_not_none(
+            pipeline_settings.get_threshold("std_dev_threshold__usec"),
+        )
 
         is_temp_ok = np.uint8(self.filter_temperature_std_dev <= temp_threshold)
         is_hv_ok = np.uint8(self.hv_voltage_std_dev <= hv_threshold)

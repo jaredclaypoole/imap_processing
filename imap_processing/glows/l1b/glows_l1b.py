@@ -230,7 +230,7 @@ def process_histogram(
     ancillary_exclusions: AncillaryExclusions,
     ancillary_parameters: AncillaryParameters,
     pipeline_settings: PipelineSettings,
-) -> xr.Dataset:
+) -> tuple[xr.DataArray]:
     """
     Will process the histogram data from the L1A dataset and return the L1B dataset.
 

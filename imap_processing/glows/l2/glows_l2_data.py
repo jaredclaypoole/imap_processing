@@ -1,6 +1,7 @@
 """Module containing the class definition for the HistogramL2 class."""
 
 from dataclasses import InitVar, dataclass, field
+from typing import cast
 
 import numpy as np
 import xarray as xr
@@ -203,7 +204,7 @@ class DailyLightcurve:
         histograms = histograms.copy()
         # Zero out areas where HISTOGRAM_FILLVAL (i.e. unused bins)
         histograms[histograms == GlowsConstants.HISTOGRAM_FILLVAL] = 0
-        return np.sum(histograms, axis=0, dtype=np.int64)
+        return cast(np.ndarray, np.sum(histograms, axis=0, dtype=np.int64))
 
     @staticmethod
     def compute_ecliptic_coords_of_bin_centers(
@@ -331,24 +332,24 @@ class HistogramL2:
     start_time: np.double
     end_time: np.double
     daily_lightcurve: DailyLightcurve
-    filter_temperature_average: np.ndarray[np.double]
-    filter_temperature_std_dev: np.ndarray[np.double]
-    hv_voltage_average: np.ndarray[np.double]
-    hv_voltage_std_dev: np.ndarray[np.double]
-    spin_period_average: np.ndarray[np.double]
-    spin_period_std_dev: np.ndarray[np.double]
-    pulse_length_average: np.ndarray[np.double]
-    pulse_length_std_dev: np.ndarray[np.double]
-    spin_period_ground_average: np.ndarray[np.double]
-    spin_period_ground_std_dev: np.ndarray[np.double]
+    filter_temperature_average: NDArray[np.double]
+    filter_temperature_std_dev: NDArray[np.double]
+    hv_voltage_average: NDArray[np.double]
+    hv_voltage_std_dev: NDArray[np.double]
+    spin_period_average: NDArray[np.double]
+    spin_period_std_dev: NDArray[np.double]
+    pulse_length_average: NDArray[np.double]
+    pulse_length_std_dev: NDArray[np.double]
+    spin_period_ground_average: NDArray[np.double]
+    spin_period_ground_std_dev: NDArray[np.double]
     position_angle_offset_average: np.double
     position_angle_offset_std_dev: np.double
-    spin_axis_orientation_std_dev: np.ndarray[np.double]
-    spacecraft_location_average: np.ndarray[np.double]
-    spacecraft_location_std_dev: np.ndarray[np.double]
-    spacecraft_velocity_average: np.ndarray[np.double]
-    spacecraft_velocity_std_dev: np.ndarray[np.double]
-    spin_axis_orientation_average: np.ndarray[np.double]
+    spin_axis_orientation_std_dev: NDArray[np.double]
+    spacecraft_location_average: NDArray[np.double]
+    spacecraft_location_std_dev: NDArray[np.double]
+    spacecraft_velocity_average: NDArray[np.double]
+    spacecraft_velocity_std_dev: NDArray[np.double]
+    spin_axis_orientation_average: NDArray[np.double]
     bad_time_flag_occurrences: np.ndarray
 
     def __init__(
