@@ -77,7 +77,7 @@ def l1a_hi_omni(
     byte_count_list = group_ds["byte_count"].values
 
     # The decompressed data in the shape of (epoch, n). Then reshape later.
-    decompressed_data = [
+    decompressed_data_list = [
         decompress(
             packet_data[:byte_count],
             compression_algorithm,
@@ -151,7 +151,7 @@ def l1a_hi_omni(
     # Reshape decompressed data to:
     #   decompressed_data -> (9, 480)
     # Then we will parse 480 data into species below for looping.
-    decompressed_data = np.array(decompressed_data, dtype=np.uint32).reshape(
+    decompressed_data = np.array(decompressed_data_list, dtype=np.uint32).reshape(
         num_packets, n_spins * 120
     )
 

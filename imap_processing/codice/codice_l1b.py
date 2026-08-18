@@ -26,7 +26,7 @@ def convert_to_rates(
     dataset: xr.Dataset,
     descriptor: str,
     cdf_attrs: ImapCdfAttributes | None = None,
-) -> np.ndarray:
+) -> xr.Dataset:
     """
     Apply a conversion from counts to rates.
 
@@ -46,8 +46,8 @@ def convert_to_rates(
 
     Returns
     -------
-    rates_data : np.ndarray
-        The converted data array.
+    rates_data : xr.Dataset
+        The converted dataset.
     """
     # No uncertainty calculation for diagnostic counters products
     calculate_unc = False if "counters" in descriptor else True

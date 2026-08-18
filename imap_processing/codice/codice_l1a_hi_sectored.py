@@ -87,7 +87,7 @@ def l1a_hi_sectored(
     byte_count_list = group_ds["byte_count"].values
 
     # The decompressed data in the shape of (epoch, n). Then reshape later.
-    decompressed_data = [
+    decompressed_data_list = [
         decompress(
             packet_data[:byte_count],
             compression_algorithm,
@@ -119,7 +119,7 @@ def l1a_hi_sectored(
         raise ValueError("Expected energy bins to be 8 for Hi Sectored data.")
 
     # Calculate collapsed size
-    decompressed_data = np.array(decompressed_data, dtype=np.uint32).reshape(
+    decompressed_data = np.array(decompressed_data_list, dtype=np.uint32).reshape(
         num_packets, num_species, energy_bins, *collapse_shape
     )
 

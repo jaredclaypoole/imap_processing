@@ -163,7 +163,7 @@ def decompress(compressed_bytes: bytes, algorithm: IntEnum) -> list[int]:
         decompressed_bytes = _apply_lzma_lossless(compressed_bytes)
         decompressed_values = _apply_lossy_b(decompressed_bytes)
     elif algorithm == CoDICECompression.PACK_24_BIT:
-        decompressed_values = _apply_pack_24_bit(compressed_bytes)
+        decompressed_values = list(_apply_pack_24_bit(compressed_bytes))
     else:
         raise ValueError(f"{algorithm} is not supported")
 

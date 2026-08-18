@@ -72,7 +72,7 @@ def l1a_ialirt_hi(unpacked_dataset: xr.Dataset, lut_file: Path) -> xr.Dataset:
     binary_data_list = unpacked_dataset["data"].values
     byte_count_list = unpacked_dataset["byte_count"].values
 
-    decompressed_data = [
+    decompressed_data_list = [
         decompress(packet_data[:byte_count], compression_algorithm)
         for packet_data, byte_count in zip(
             binary_data_list, byte_count_list, strict=False
@@ -132,7 +132,7 @@ def l1a_ialirt_hi(unpacked_dataset: xr.Dataset, lut_file: Path) -> xr.Dataset:
     )
 
     # Reshape data into (epoch, energy, n_spins, spin_sector, inst_az)
-    decompressed_data = np.array(decompressed_data, dtype=np.uint32).reshape(
+    decompressed_data = np.array(decompressed_data_list, dtype=np.uint32).reshape(
         num_packets,
         energy_bins,
         n_spins,

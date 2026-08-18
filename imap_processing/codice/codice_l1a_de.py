@@ -242,9 +242,9 @@ def _create_dataset_coords(
         compression=CoDICECompression.LOSSLESS.value,  # DE data is always lossless
     )
     epochs, epochs_delta = get_codice_epoch_time(
-        packets["acq_start_seconds"].isel(epoch=epoch_slice),
-        packets["acq_start_subseconds"].isel(epoch=epoch_slice),
-        packets["spin_period"].isel(epoch=epoch_slice),
+        packets["acq_start_seconds"].isel(epoch=epoch_slice).to_numpy(),
+        packets["acq_start_subseconds"].isel(epoch=epoch_slice).to_numpy(),
+        packets["spin_period"].isel(epoch=epoch_slice).to_numpy(),
         view_tab_info,
     )
 
@@ -442,7 +442,7 @@ def process_de_data(
                 # Set padding values to zero
                 pad_packet["num_events"].values = np.full(num_missing_priorities, 0)
                 pad_packet["byte_count"].values = np.full(num_missing_priorities, 0)
-                pad_packet["priority"].values = missing_priorities
+                pad_packet["priority"].values = np.array(missing_priorities)
                 # Set event_data to empty object arrays for padding packets
                 for i in range(num_missing_priorities):
                     pad_packet["event_data"].data[i] = np.array([], dtype=np.uint8)
