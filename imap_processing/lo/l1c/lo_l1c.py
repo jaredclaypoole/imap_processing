@@ -191,7 +191,7 @@ def lo_l1c(sci_dependencies: dict, anc_dependencies: list) -> list[xr.Dataset]:
         pointing_midpoint_met = (
             pset["pointing_start_met"].item() + pset["pointing_end_met"].item()
         ) / 2
-        pointing_midpoint_ttj2000ns = met_to_ttj2000ns(pointing_midpoint_met)
+        pointing_midpoint_ttj2000ns = met_to_ttj2000ns(pointing_midpoint_met).item()
         pset["hae_longitude"], pset["hae_latitude"] = set_pointing_directions(
             pointing_midpoint_ttj2000ns, attr_mgr, pset["pivot_angle"].values[0].item()
         )
@@ -347,7 +347,7 @@ def _get_peak_mask(
         & (de["tof2"] <= peak_highs[2])
     )
 
-    return peak_mask
+    return peak_mask.to_numpy()
 
 
 def _get_golden_triple_mask(de: xr.Dataset) -> np.ndarray:
@@ -367,7 +367,7 @@ def _get_golden_triple_mask(de: xr.Dataset) -> np.ndarray:
     golden_triple_mask : numpy.ndarray
         Boolean mask indicating events within the golden triple coincidence types.
     """
-    return de["coincidence_type"] == "111111"
+    return (de["coincidence_type"] == "111111").to_numpy()
 
 
 def get_h_species(de: xr.Dataset) -> xr.Dataset:

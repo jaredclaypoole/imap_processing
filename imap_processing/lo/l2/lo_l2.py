@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -605,7 +606,7 @@ def _accumulate_pointing(
     # is where the despun frame is sampled.
     epoch = met_to_ttj2000ns((gt_start.min() + gt_end.max()) / 2.0)
     pointing_set = LoSpinAnglePointingSet(
-        epoch,
+        epoch.item(),
         pivot_angle,
         spin_angles,
         {
@@ -617,7 +618,7 @@ def _accumulate_pointing(
             "bg_rate_exposure": background_rates[:, np.newaxis] * pointing_exposure,
         },
         sky_map.spice_reference_frame,
-        energy,
+        energy.to_numpy(),
     )
     # The projection sums the spin-angle bins that land in the same map pixel,
     # and adds this pointing on top of what the earlier pointings left there.
@@ -868,7 +869,7 @@ def _calculate_rates_and_intensities(
 
     count_rate = _divide(counts, exposure)
     # Poisson uncertainty on the counts, propagated to the rate
-    count_rate_stat_uncert = _divide(np.sqrt(counts), exposure)
+    count_rate_stat_uncert = _divide(cast(xr.DataArray, np.sqrt(counts)), exposure)
 
     intensity = _divide(count_rate, geometric_factor * energy)
     intensity_stat_uncert = _divide(count_rate_stat_uncert, geometric_factor * energy)
@@ -890,9 +891,13 @@ def _calculate_rates_and_intensities(
     intensity_sys_err_minus = (intensity - intensity_lower).where(valid, 0.0)
 
     bg_rate = _divide(bg_rate_exposure, exposure)
-    bg_rate_stat_uncert = np.sqrt(_divide(bg_rate, exposure))
+    bg_rate_stat_uncert = cast(xr.DataArray, np.sqrt(_divide(bg_rate, exposure)))
     bg_intensity = _divide(bg_rate, geometric_factor * energy)
     bg_intensity_stat_uncert = _divide(bg_rate_stat_uncert, geometric_factor * energy)
+    intensity_sys_err = cast(
+        xr.DataArray,
+        np.sqrt(intensity_sys_err_plus * intensity_sys_err_minus),
+    )
 
     return {
         "ena_count": counts,
@@ -901,9 +906,7 @@ def _calculate_rates_and_intensities(
         "ena_count_rate_stat_uncert": count_rate_stat_uncert,
         "ena_intensity": intensity,
         "ena_intensity_stat_uncert": intensity_stat_uncert,
-        "ena_intensity_sys_err": np.sqrt(
-            intensity_sys_err_plus * intensity_sys_err_minus
-        ),
+        "ena_intensity_sys_err": intensity_sys_err,
         "ena_intensity_sys_err_plus": intensity_sys_err_plus,
         "ena_intensity_sys_err_minus": intensity_sys_err_minus,
         "bg_rate": bg_rate,

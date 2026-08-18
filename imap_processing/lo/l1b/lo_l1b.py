@@ -3,6 +3,7 @@
 import logging
 from dataclasses import Field
 from datetime import datetime, timedelta
+from typing import cast
 
 import numpy as np
 import spiceypy
@@ -356,7 +357,7 @@ def l1b_allrates(
     l1b_all_rates = set_spin_cycle_from_spin_data(l1a_hist, l1b_all_rates, spin_data)
 
     pointing_start_met, _ = get_pointing_times(
-        ttj2000ns_to_met(l1a_hist["epoch"].values[0].item())
+        ttj2000ns_to_met(l1a_hist["epoch"].values[0].item()).item()
     )
     l1b_all_rates = set_esa_mode(pointing_start_met, anc_dependencies, l1b_all_rates)
     # resweep the histogram data
@@ -584,7 +585,7 @@ def set_spin_cycle(
     counts = l1a_de["de_count"].values
     # split the esa_steps into ASC groups
     de_asc_groups = np.split(l1a_de["esa_step"].values, np.cumsum(counts)[:-1])
-    spin_cycle = []
+    spin_cycle: list[np.float64] = []
     for esa_asc_group in de_asc_groups:
         # calculate the spin cycle for each DE in the ASC group
         # TODO: Add equation number in algorithm document when new version is
@@ -651,7 +652,9 @@ def set_spin_cycle_from_spin_data(
     closest_start_acq_per_asc = acq_start.isel(epoch=science_to_spin_indices)
 
     # compute spin start number for each remaining ASC
-    spin_start_num_per_asc = np.atleast_1d(get_spin_number(closest_start_acq_per_asc))
+    spin_start_num_per_asc = np.atleast_1d(
+        get_spin_number(closest_start_acq_per_asc.to_numpy())
+    )
     spin_start_num_per_asc = spin_start_num_per_asc[:, None]  # (n_valid, 1)
 
     logical_src = l1a_science.attrs.get("Logical_source", "")
@@ -666,8 +669,8 @@ def set_spin_cycle_from_spin_data(
             spin_cycle.extend(
                 spin_start_num_per_asc[asc_idx, 0] + 7 + (esa_steps - 1) * 2
             )
-        spin_cycle = np.array(spin_cycle)
-        l1b_science["spin_cycle"] = xr.DataArray(spin_cycle, dims=["epoch"])
+        spin_cycle_arr = np.array(spin_cycle)
+        l1b_science["spin_cycle"] = xr.DataArray(spin_cycle_arr, dims=["epoch"])
     elif logical_src == "imap_lo_l1a_histogram":
         # For histogram: keep 2D array (n_valid_epochs, esa_step)
         esa_steps = l1b_science["esa_step"].values  # shape: (7,)
@@ -683,7 +686,7 @@ def set_spin_cycle_from_spin_data(
 
 
 def match_science_to_spin_asc(
-    science_met_per_asc: xr.DataArray, spin_met_per_asc: xr.DataArray
+    science_met_per_asc: np.ndarray, spin_met_per_asc: np.ndarray
 ) -> np.ndarray:
     """
     Compute the indices of the closest spin acquisition times for each science event.
@@ -695,9 +698,9 @@ def match_science_to_spin_asc(
 
     Parameters
     ----------
-    science_met_per_asc : xr.DataArray
+    science_met_per_asc : np.ndarray
         An array of science acquisition epochs in MET seconds.
-    spin_met_per_asc : xr.DataArray
+    spin_met_per_asc : np.ndarray
         An array of spin acquisition epochs in MET seconds.
 
     Returns
@@ -1222,14 +1225,14 @@ def set_pointing_bin(l1b_de: xr.Dataset) -> xr.Dataset:
 
     # Define bin edges
     # 3600 bins, 0.1° each
-    lon_bins = np.linspace(0, 360, 3601)
+    lon_bins_float = np.linspace(0, 360, 3601)
     # 40 bins, 0.1° each
-    lat_bins = np.linspace(-2, 2, 41)
+    lat_bins_float = np.linspace(-2, 2, 41)
 
     # put the lons and lats into bins
     # shift to 0-based index
-    lon_bins = np.digitize(lons, lon_bins) - 1
-    lat_bins = np.digitize(lats, lat_bins) - 1
+    lon_bins = np.digitize(lons, lon_bins_float) - 1
+    lat_bins = np.digitize(lats, lat_bins_float) - 1
 
     l1b_de["spin_bin"] = xr.DataArray(
         lon_bins,
@@ -1539,7 +1542,7 @@ def resweep_histogram_data(
         # Place potentially multiple esa_steps into the same energy level bin
         np.add.at(
             reswept,
-            (slice(None), energy_mapping, slice(None)),
+            (slice(None), energy_mapping, slice(None)),  # type: ignore[arg-type]
             l1b_histrates[field].values,
         )
         l1b_histrates[field].values = reswept
@@ -1553,12 +1556,12 @@ def resweep_histogram_data(
     # N_SPINS_PER_ESA_LEVEL spins into each bin as our multiplication factor
     np.add.at(
         exposure_factor_6deg,
-        (slice(None), energy_mapping, slice(None)),
+        (slice(None), energy_mapping, slice(None)),  # type: ignore[arg-type]
         c.N_SPINS_PER_ESA_LEVEL,
     )
     np.add.at(
         exposure_factor_60deg,
-        (slice(None), energy_mapping, slice(None)),
+        (slice(None), energy_mapping, slice(None)),  # type: ignore[arg-type]
         c.N_SPINS_PER_ESA_LEVEL,
     )
 
@@ -1736,7 +1739,7 @@ def calculate_de_rates(
     )
     np.add.at(
         exposure_time,
-        (slice(None), energy_step_mapping),
+        (slice(None), energy_step_mapping),  # type: ignore[arg-type]
         asc_avg_spin_durations[:, np.newaxis],
     )
 
@@ -1831,7 +1834,7 @@ def calculate_de_rates(
     ds["pivot_angle"] = l1b_de["pivot_angle"]
 
     pointing_start_met, _ = get_pointing_times(
-        ttj2000ns_to_met(ds["epoch"].values[0].item())
+        ttj2000ns_to_met(ds["epoch"].values[0].item()).item()
     )
     ds = set_esa_mode(pointing_start_met, anc_dependencies, ds)
 
@@ -2497,7 +2500,7 @@ def l1b_bgrates_and_goodtimes(  # noqa: PLR0912
         )
 
         coarse_pot_pri = cdf_hk["pcc_coarse_pot_pri"].values
-        pivot = np.nanmedian(  # type: ignore
+        pivot = np.nanmedian(
             coarse_pot_pri[(hk_epoch_ets >= start_et_hk) & (hk_epoch_ets <= end_et_hk)]
         )
         if np.isnan(pivot):
@@ -2708,7 +2711,7 @@ def l1b_bgrates_and_goodtimes(  # noqa: PLR0912
         goodtime_rows[i] = (
             begin - c.GOODTIME_PADDING,
             end + c.GOODTIME_PADDING,
-            *other,
+            *cast(tuple[float, float, float], other),
         )
 
     if len(goodtime_rows) == 0:
