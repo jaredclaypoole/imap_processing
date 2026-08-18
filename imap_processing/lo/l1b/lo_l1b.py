@@ -3,7 +3,6 @@
 import logging
 from dataclasses import Field
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import numpy as np
 import spiceypy
@@ -44,6 +43,7 @@ from imap_processing.spice.time import (
     ttj2000ns_to_et,
     ttj2000ns_to_met,
 )
+from imap_processing.utils import validate_strs
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +182,7 @@ DE_CLOCK_TICK_S = 4.096e-3  # seconds per DE clock tick
 
 def lo_l1b(
     sci_dependencies: dict, anc_dependencies: list, descriptor: str
-) -> list[Path]:
+) -> list[xr.Dataset]:
     """
     Will process IMAP-Lo L1A data into L1B CDF data products.
 
@@ -197,8 +197,8 @@ def lo_l1b(
 
     Returns
     -------
-    created_file_paths : list[pathlib.Path]
-        Location of created CDF files.
+    output_datasets : list[xr.Dataset]
+        The output datasets.
     """
     # create the attribute manager for this data level
     attr_mgr_l1b = ImapCdfAttributes()
@@ -228,8 +228,8 @@ def lo_l1b(
     # If dependencies are used to create Histogram Rates
     elif descriptor == "all-rates":
         logger.info("\nProcessing IMAP-Lo L1B Hist and Monitor Rates...")
-        ds = l1b_allrates(sci_dependencies, anc_dependencies, attr_mgr_l1b)
-        datasets_to_return.extend(ds)
+        ds_list = l1b_allrates(sci_dependencies, anc_dependencies, attr_mgr_l1b)
+        datasets_to_return.extend(ds_list)
 
     elif descriptor == "derates":
         logger.info("\nProcessing IMAP-Lo L1B DE Rates...")
@@ -243,8 +243,10 @@ def lo_l1b(
 
     elif descriptor == "goodtimes":
         logger.info("\nProcessing IMAP-Lo L1B Background Rates and Goodtimes...")
-        ds = l1b_bgrates_and_goodtimes(sci_dependencies, anc_dependencies, attr_mgr_l1b)
-        datasets_to_return.extend(ds)
+        ds_list = l1b_bgrates_and_goodtimes(
+            sci_dependencies, anc_dependencies, attr_mgr_l1b
+        )
+        datasets_to_return.extend(ds_list)
 
     else:
         logger.warning(f"Unexpected descriptor: {descriptor!r}")
@@ -325,7 +327,7 @@ def l1b_de(
 
 def l1b_allrates(
     sci_dependencies: dict, anc_dependencies: list, attr_mgr_l1b: ImapCdfAttributes
-) -> xr.Dataset:
+) -> list[xr.Dataset]:
     """
     Create the IMAP-Lo L1B Histogram Rates dataset.
 
@@ -880,7 +882,7 @@ def set_each_event_epoch(l1b_de: xr.Dataset) -> xr.Dataset:
 
 def set_avg_spin_durations_per_event(
     l1a_de: xr.Dataset, l1b_de: xr.Dataset, avg_spin_durations_per_cycle: xr.DataArray
-) -> xr.DataArray:
+) -> xr.Dataset:
     """
     Set the average spin duration for each direct event.
 
@@ -2448,7 +2450,7 @@ def l1b_bgrates_and_goodtimes(  # noqa: PLR0912
     anc_dependencies: list,
     attr_mgr_l1b: ImapCdfAttributes,
     delay_max: int | None = None,
-) -> xr.Dataset:
+) -> list[xr.Dataset]:
     """
     Create the IMAP-Lo L1B Background dataset.
 
@@ -2468,8 +2470,9 @@ def l1b_bgrates_and_goodtimes(  # noqa: PLR0912
 
     Returns
     -------
-    l1b_bgrates_ds : xr.Dataset
+    [l1b_bgrates_ds, l1b_goodtimes_ds] : list[xr.Dataset]
         L1B bgrates dataset with ESA flags per epoch and bin.
+        L1B goodtimes dataset with ESA flags per epoch and bin.
         Each dataset also includes a background rate.
     """
     if delay_max is None:
@@ -2848,7 +2851,7 @@ def split_backgrounds_and_goodtimes_dataset(
     background_rate_fields = sorted(
         [
             data_var
-            for data_var in l1b_backgrounds_and_goodtimes_ds.data_vars
+            for data_var in validate_strs(l1b_backgrounds_and_goodtimes_ds.data_vars)
             if any(
                 data_var.endswith(suffix) for suffix in background_rate_field_suffixes
             )
