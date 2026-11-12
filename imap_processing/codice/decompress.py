@@ -33,7 +33,6 @@ import lzma
 from enum import IntEnum
 
 import numpy as np
-from numpy.typing import NDArray
 
 from imap_processing.codice.constants import LOSSY_A_TABLE, LOSSY_B_TABLE
 from imap_processing.codice.utils import CoDICECompression
@@ -100,7 +99,7 @@ def _apply_lzma_lossless(compressed_bytes: bytes) -> bytes:
     return lzma_decompressed_values
 
 
-def _apply_pack_24_bit(compressed_bytes: bytes) -> NDArray[int]:
+def _apply_pack_24_bit(compressed_bytes: bytes) -> np.ndarray[int]:
     """
     Apply the pack 24 bit decompression algorithm.
 
@@ -114,7 +113,9 @@ def _apply_pack_24_bit(compressed_bytes: bytes) -> NDArray[int]:
     decompressed_values : NDArray[int]
         The 24-bit decompressed values.
     """
-    decompressed_values = np.frombuffer(compressed_bytes, dtype=np.uint8).reshape(-1, 3)
+    decompressed_values: np.ndarray = np.frombuffer(
+        compressed_bytes, dtype=np.uint8
+    ).reshape(-1, 3)
     decompressed_values = np.array(
         [int.from_bytes(value, byteorder="big") for value in decompressed_values],
         dtype=np.uint32,
@@ -161,7 +162,7 @@ def decompress(compressed_bytes: bytes, algorithm: IntEnum) -> list[int]:
         decompressed_bytes = _apply_lzma_lossless(compressed_bytes)
         decompressed_values = _apply_lossy_b(decompressed_bytes)
     elif algorithm == CoDICECompression.PACK_24_BIT:
-        decompressed_values = _apply_pack_24_bit(compressed_bytes)
+        decompressed_values = list(_apply_pack_24_bit(compressed_bytes))
     else:
         raise ValueError(f"{algorithm} is not supported")
 
